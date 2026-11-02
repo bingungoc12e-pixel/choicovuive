@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Grandmaster Chess</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#020617;--card:#0f172a;--bd:#1e293b;--tx:#e2e8f0;--mut:#94a3b8;--ac:#f59e0b;--btn:#1e293b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:light){:root:not([data-theme=dark]){color-scheme:light;--bg:#f1f5f9;--card:#fff;--bd:#cbd5e1;--tx:#0f172a;--mut:#475569;--btn:#e2e8f0}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:12px;display:grid;gap:12px;grid-template-columns:1fr}
+@media(min-width:860px){.wrap{grid-template-columns:minmax(0,540px) 1fr;align-items:start}}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:10px}
+.clock{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--mut);margin:6px 0}
+.clock.on{border-color:var(--ac);color:var(--tx);background:rgba(245,158,11,.15)}.clock.low.on{border-color:#ef4444;background:rgba(239,68,68,.2);animation:p 1s infinite}
+@keyframes p{50%{opacity:.6}}.clock b{font:700 20px ui-monospace,monospace}
+#board{display:grid;grid-template-columns:repeat(8,1fr);aspect-ratio:1;width:100%;border:4px solid var(--bd);border-radius:12px;overflow:hidden;user-select:none}
+.sq{position:relative;display:flex;align-items:center;justify-content:center;font-size:min(8.4vw,45px);line-height:1;cursor:pointer}
+.sq.l{background:var(--L)}.sq.d{background:var(--D)}
+.sq.last{box-shadow:inset 0 0 0 100px rgba(250,204,21,.4)}.sq.sel{box-shadow:inset 0 0 0 100px rgba(251,191,36,.55)}
+.sq.chk{box-shadow:inset 0 0 22px 8px rgba(239,68,68,.9)}
+.sq.hint::after{content:"";width:28%;height:28%;border-radius:50%;background:rgba(16,185,129,.65);position:absolute}
+.sq.cap::after{content:"";inset:6%;border-radius:50%;border:4px solid rgba(239,68,68,.7);position:absolute}
+.pw{color:#fff;text-shadow:0 0 2px #000,0 0 2px #000,0 1px 3px #000}.pb{color:#111;text-shadow:0 0 1px #fff}
+.btns{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+button,select{background:var(--btn);color:var(--tx);border:0;border-radius:8px;padding:9px 6px;font-size:13px;font-weight:600;cursor:pointer}
+button.on{background:var(--ac);color:#111}button.red{background:rgba(239,68,68,.25)}button:disabled{opacity:.4}
+#hist{height:150px;overflow-y:auto;font:13px ui-monospace,monospace;margin:8px 0}
+#hist div{display:grid;grid-template-columns:34px 1fr 1fr;padding:2px 0}#hist span.m{padding:1px 6px;border-radius:4px;cursor:pointer}#hist span.cur{background:rgba(245,158,11,.3);color:var(--ac);font-weight:700}
+.row{display:flex;gap:6px;align-items:center;justify-content:space-between;font-size:12px;color:var(--mut);margin-top:6px}
+#cap{font-size:18px;min-height:24px}h1{font-size:18px;margin:0 0 8px}
+#over{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:9}
+#over .card{text-align:center;padding:24px;max-width:300px;color:var(--tx)}
+</style></head><body>
+<div class="wrap">
+<div>
+ <div class="clock" id="cT"><span id="nT">Đen</span><b id="tT">10:00</b></div>
+ <div id="board"></div>
+ <div class="clock" id="cB"><span id="nB">Trắng</span><b id="tB">10:00</b></div>
+</div>
+<div style="display:grid;gap:12px">
+ <div class="card"><h1>♟️ Grandmaster Chess</h1>
+  <div class="btns" style="margin:0"><button id="m-local">👥 2 Người</button><button id="m-ai" class="on">🤖 Đấu Máy</button></div>
+  <div class="row" id="aiopt"><span>Độ khó</span><select id="diff"><option value="easy">Dễ</option><option value="medium" selected>Vừa</option><option value="hard">Khó</option></select><span>Màu</span><select id="col"><option value="w">Trắng</option><option value="b">Đen</option><option value="r">Ngẫu nhiên</option></select></div>
+  <div class="row"><span>Thời gian</span><select id="tc"><option value="60">Bullet 1p</option><option value="180">Blitz 3p</option><option value="300">Blitz 5p</option><option value="600" selected>Rapid 10p</option><option value="900">Rapid 15p</option></select><span>Giao diện</span><select id="th"><option value="wood">Gỗ</option><option value="classic">Cổ điển</option><option value="neon">Neon</option><option value="slate">Dark Slate</option></select></div>
+ </div>
+ <div class="card"><div class="row" style="margin:0"><span>Trắng bắt: <span id="capW"></span> <b id="adW" style="color:#10b981"></b></span><span>Đen bắt: <span id="capB"></span> <b id="adB" style="color:#10b981"></b></span></div></div>
+ <div class="card"><div class="row" style="margin:0 0 4px"><b style="color:var(--tx)">Lịch sử nước đi</b><button id="copy">Copy PGN</button></div>
+  <div id="hist"></div>
+  <div class="btns" style="grid-template-columns:repeat(4,1fr);margin:0"><button id="r0">⏮</button><button id="r1">◀</button><button id="r2">▶</button><button id="r3">⏭</button></div></div>
+ <div class="card"><div class="btns" style="margin:0"><button id="undo">↩ Đi lại</button><button id="draw">🤝 Xin hòa</button><button id="resign" class="red">🏳 Đầu hàng</button>
+  <button id="flip">🔄 Lật bàn</button><button id="snd">🔊 Âm thanh</button><button id="new" class="on">Ván mới</button></div></div>
+</div></div>
+<div id="over"><div class="card"><h2 id="ot"></h2><p id="or"></p><button class="on" onclick="newGame()">Ván mới</button></div></div>
+<script>
+const $=id=>document.getElementById(id);
+const TH={wood:['#f0d9b5','#b58863'],classic:['#eeeed2','#769656'],neon:['#1e293b','#0ea5e9'],slate:['#94a3b8','#334155']};
+const SY={w:{p:'♙',n:'♘',b:'♗',r:'♖',q:'♕',k:'♔'},b:{p:'♟',n:'♞',b:'♝',r:'♜',q:'♛',k:'♚'}};
+const VAL={p:1,n:3,b:3,r:5,q:9,k:0};
+let g,fens,mv,view,last,over,clk,sel,hints,mode='ai',me='w',orient='w',snd=true,tc=600,busy=false;
+// Âm thanh
+let ac;function tone(f,t,d,v,dl){if(!snd)return;try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator(),G=ac.createGain(),s=ac.currentTime+dl;o.type=t;o.frequency.value=f;G.gain.setValueAtTime(v,s);G.gain.exponentialRampToValueAtTime(.001,s+d);o.connect(G);G.connect(ac.destination);o.start(s);o.stop(s+d)}catch(e){}}
+const S={move:()=>tone(320,'triangle',.07,.18,0),cap:()=>{tone(180,'sawtooth',.09,.2,0);tone(260,'triangle',.06,.15,.04)},chk:()=>{tone(587,'sine',.12,.2,0);tone(880,'sine',.18,.2,.1)},end:()=>{tone(523,'triangle',.16,.2,0);tone(659,'triangle',.16,.2,.15);tone(784,'triangle',.28,.25,.3)}};
+function newGame(){g=new Chess();fens=[g.fen()];mv=[];view=0;last=null;over=false;sel=null;hints=[];clk={w:tc,b:tc};$('over').style.display='none';
+ if(mode==='ai'){let c=$('col').value;if(c==='r')c=Math.random()<.5?'w':'b';me=c;orient=c}else{me='w';orient='w'}
+ render();aiTurn()}
+function fmt(s){return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
+function kingSq(){const b=g.board();for(let r=0;r<8;r++)for(let c=0;c<8;c++){const p=b[r][c];if(p&&p.type==='k'&&p.color===g.turn())return 'abcdefgh'[c]+(8-r)}}
+function render(){
+ const [L,D]=TH[$('th').value];const bd=$('board');bd.style.setProperty('--L',L);bd.style.setProperty('--D',D);
+ const pos=new Chess(fens[view]).board(),live=view===mv.length,ks=live&&g.in_check()?kingSq():null;
+ let h='';for(let i=0;i<64;i++){let r=Math.floor(i/8),c=i%8;if(orient==='b'){r=7-r;c=7-c}
+  const sq='abcdefgh'[c]+(8-r),p=pos[r][c];
+  let cl='sq '+((r+c)%2?'d':'l');
+  if(live&&last&&(sq===last.from||sq===last.to))cl+=' last';if(sq===sel)cl+=' sel';if(sq===ks)cl+=' chk';
+  if(hints.includes(sq))cl+=p?' cap':' hint';
+  h+=`<div class="${cl}" data-s="${sq}">${p?`<span class="${p.color==='w'?'pw':'pb'}">${SY[p.color][p.type]}</span>`:''}</div>`}
+ bd.innerHTML=h;
+ const top=orient==='w'?'b':'w',bot=orient==='w'?'w':'b',nm={w:'Trắng',b:'Đen'};
+ $('nT').textContent=nm[top]+(mode==='ai'&&me!==top?' (Máy)':'');$('nB').textContent=nm[bot]+(mode==='ai'&&me!==bot?' (Máy)':'');
+ $('tT').textContent=fmt(clk[top]);$('tB').textContent=fmt(clk[bot]);
+ [['cT',top],['cB',bot]].forEach(([id,c])=>{const e=$(id);e.className='clock'+(g.turn()===c&&!over?' on':'')+(clk[c]<30?' low':'')});
+ // bị ăn
+ const cw=[],cb=[];let sc=0;mv.forEach(m=>{if(m.captured){(m.color==='w'?cw:cb).push(m.captured);sc+=(m.color==='w'?1:-1)*VAL[m.captured]}});
+ $('capW').textContent=cw.map(x=>SY.b[x]).join('');$('capB').textContent=cb.map(x=>SY.w[x]).join('');
+ $('adW').textContent=sc>0?'+'+sc:'';$('adB').textContent=sc<0?'+'+(-sc):'';
+ // lịch sử
+ let hh='';for(let i=0;i<mv.length;i+=2){hh+=`<div><span style="color:var(--mut)">${i/2+1}.</span><span class="m ${view===i+1?'cur':''}" onclick="jump(${i+1})">${mv[i].san}</span>${mv[i+1]?`<span class="m ${view===i+2?'cur':''}" onclick="jump(${i+2})">${mv[i+1].san}</span>`:'<span></span>'}</div>`}
+ $('hist').innerHTML=hh;$('hist').scrollTop=1e5;
+ $('r0').disabled=$('r1').disabled=view===0;$('r2').disabled=$('r3').disabled=view===mv.length;
+ $('undo').disabled=!mv.length||over;$('draw').disabled=$('resign').disabled=over;$('snd').textContent=snd?'🔊 Âm thanh':'🔇 Tắt tiếng'}
+function jump(i){view=Math.max(0,Math.min(mv.length,i));sel=null;hints=[];render()}
+function end(t,r){over=true;S.end();$('ot').textContent=t;$('or').textContent=r;$('over').style.display='flex';render()}
+function play(m){const r=g.move({from:m.from,to:m.to,promotion:m.promotion||'q'});if(!r)return false;
+ mv.push(r);fens.push(g.fen());view=mv.length;last={from:r.from,to:r.to};sel=null;hints=[];
+ if(g.in_checkmate()){render();end('Chiếu bí!',(r.color==='w'?'Trắng':'Đen')+' thắng!')}
+ else if(g.game_over()){render();end('Hòa!',g.in_stalemate()?'Hết nước đi (Stalemate)':g.insufficient_material()?'Thiếu lực lượng':g.in_threefold_repetition()?'Lặp 3 lần':'Luật 50 nước')}
+ else{r.captured?S.cap():g.in_check()?S.chk():S.move();render()}
+ return true}
+$('board').addEventListener('click',e=>{const el=e.target.closest('.sq');if(!el||over||busy||view!==mv.length)return;
+ if(mode==='ai'&&g.turn()!==me)return;const s=el.dataset.s;
+ if(sel&&hints.includes(s)){play({from:sel,to:s});aiTurn();return}
+ const p=g.get(s);if(p&&p.color===g.turn()){sel=s;hints=g.moves({square:s,verbose:true}).map(m=>m.to)}else{sel=null;hints=[]}render()});
+// AI
+const CEN=[0,1,2,3,3,2,1,0];
+function ev(){const b=g.board();let t=0;const V={p:100,n:320,b:330,r:500,q:900,k:0};
+ for(let r=0;r<8;r++)for(let c=0;c<8;c++){const p=b[r][c];if(!p)continue;let v=V[p.type];
+  if(p.type!=='k'&&p.type!=='r'&&p.type!=='q')v+=(CEN[r]+CEN[c])*5;
+  if(p.type==='p')v+=(p.color==='w'?6-r:r-1)*6;
+  t+=p.color==='w'?v:-v}return t}
+function mm(d,a,b,mx){if(g.in_checkmate())return mx?-99999-d:99999+d;if(d===0||g.game_over())return g.game_over()?0:ev();
+ const ms=g.moves({verbose:true}).sort((x,y)=>(y.captured?1:0)-(x.captured?1:0));let best=mx?-Infinity:Infinity;
+ for(const m of ms){g.move(m);const v=mm(d-1,a,b,!mx);g.undo();
+  if(mx){best=Math.max(best,v);a=Math.max(a,v)}else{best=Math.min(best,v);b=Math.min(b,v)}if(b<=a)break}return best}
+function pick(){const ms=g.moves({verbose:true}),df=$('diff').value;
+ if(df==='easy'){const c=ms.filter(m=>m.captured);return c.length&&Math.random()<.35?c[Math.random()*c.length|0]:ms[Math.random()*ms.length|0]}
+ const d=df==='hard'?3:2,mx=g.turn()==='w';let bm=ms[0],bv=mx?-Infinity:Infinity;
+ ms.sort(()=>Math.random()-.5);
+ for(const m of ms){g.move(m);const v=mm(d-1,-Infinity,Infinity,!mx);g.undo();if(mx?v>bv:v<bv){bv=v;bm=m}}return bm}
+function aiTurn(){if(mode!=='ai'||over||g.turn()===me)return;busy=true;
+ setTimeout(()=>{if(!over){const m=pick();if(m)play(m)}busy=false},350)}
+// Đồng hồ
+setInterval(()=>{if(over||!mv.length)return;const t=g.turn();clk[t]--;
+ if(clk[t]<=0){clk[t]=0;end('Hết giờ!',(t==='w'?'Đen':'Trắng')+' thắng do đối phương hết thời gian.')}else render()},1000);
+// Điều khiển
+function setMode(m){mode=m;$('m-local').className=m==='local'?'on':'';$('m-ai').className=m==='ai'?'on':'';$('aiopt').style.display=m==='ai'?'flex':'none';newGame()}
+$('m-local').onclick=()=>setMode('local');$('m-ai').onclick=()=>setMode('ai');
+$('tc').onchange=e=>{tc=+e.target.value;newGame()};$('th').onchange=render;$('diff').onchange=()=>{};$('col').onchange=newGame;
+$('r0').onclick=()=>jump(0);$('r1').onclick=()=>jump(view-1);$('r2').onclick=()=>jump(view+1);$('r3').onclick=()=>jump(mv.length);
+$('flip').onclick=()=>{orient=orient==='w'?'b':'w';render()};
+$('snd').onclick=()=>{snd=!snd;render()};$('new').onclick=newGame;
+$('undo').onclick=()=>{if(busy)return;const n=mode==='ai'&&g.turn()===me?2:mode==='ai'?1:1;
+ for(let i=0;i<n&&mv.length;i++){g.undo();mv.pop();fens.pop()}view=mv.length;last=mv.length?{from:mv[mv.length-1].from,to:mv[mv.length-1].to}:null;sel=null;hints=[];render();aiTurn()};
+$('draw').onclick=()=>{if(mode==='ai'){let sc=0;mv.forEach(m=>{if(m.captured)sc+=(m.color==='w'?1:-1)*VAL[m.captured]});
+  (me==='w'?sc<=0:sc>=0)?end('Hòa!','Máy chấp nhận hòa.'):alert('Máy từ chối lời xin hòa.')}
+ else if(confirm((g.turn()==='w'?'Đen':'Trắng')+' có đồng ý hòa không?'))end('Hòa!','Hai bên thỏa thuận hòa.')};
+$('resign').onclick=()=>{const c=mode==='ai'?me:g.turn();if(confirm('Bạn chắc chắn muốn đầu hàng?'))end('Đầu hàng',(c==='w'?'Trắng':'Đen')+' đầu hàng. '+(c==='w'?'Đen':'Trắng')+' thắng.')};
+$('copy').onclick=()=>{const t=g.pgn();(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(()=>{}).finally(()=>{$('copy').textContent='Đã chép ✓';setTimeout(()=>$('copy').textContent='Copy PGN',1500)})};
+newGame();
+</script></body></html>
